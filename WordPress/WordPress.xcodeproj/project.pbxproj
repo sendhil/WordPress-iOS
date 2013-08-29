@@ -760,6 +760,7 @@
 		85F2C4CF17B9F81A00A303E0 /* BaseNUXViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 85F2C4CE17B9F81A00A303E0 /* BaseNUXViewController.m */; };
 		85F2C4D417BA0ED400A303E0 /* NewSidebarViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 85F2C4D217BA0ED400A303E0 /* NewSidebarViewController.m */; };
 		85F2C4D517BA0ED400A303E0 /* NewSidebarViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 85F2C4D317BA0ED400A303E0 /* NewSidebarViewController.xib */; };
+		93CB0EF417CF95700058A46D /* RichEditPostViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 93CB0EF317CF95700058A46D /* RichEditPostViewController.m */; };
 		A01C542E0E24E88400D411F2 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A01C542D0E24E88400D411F2 /* SystemConfiguration.framework */; };
 		A01C55480E25E0D000D411F2 /* defaultPostTemplate.html in Resources */ = {isa = PBXBuildFile; fileRef = A01C55470E25E0D000D411F2 /* defaultPostTemplate.html */; };
 		A0E293F10E21027E00C6919C /* WPAddCategoryViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = A0E293F00E21027E00C6919C /* WPAddCategoryViewController.m */; };
@@ -1906,6 +1907,8 @@
 		85F2C4D217BA0ED400A303E0 /* NewSidebarViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NewSidebarViewController.m; sourceTree = "<group>"; };
 		85F2C4D317BA0ED400A303E0 /* NewSidebarViewController.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = NewSidebarViewController.xib; sourceTree = "<group>"; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		93CB0EF217CF95620058A46D /* RichEditPostViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RichEditPostViewController.h; sourceTree = "<group>"; };
+		93CB0EF317CF95700058A46D /* RichEditPostViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RichEditPostViewController.m; sourceTree = "<group>"; };
 		A01C542D0E24E88400D411F2 /* SystemConfiguration.framework */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		A01C55470E25E0D000D411F2 /* defaultPostTemplate.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; name = defaultPostTemplate.html; path = Resources/HTML/defaultPostTemplate.html; sourceTree = "<group>"; };
 		A0E293EF0E21027E00C6919C /* WPAddCategoryViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WPAddCategoryViewController.h; sourceTree = "<group>"; };
@@ -3379,8 +3382,6 @@
 		AC3439790E11434600E5D79B /* Post */ = {
 			isa = PBXGroup;
 			children = (
-				E13FA0D5134BE78D007DCDD0 /* QuickPhotoViewController.h */,
-				E13FA0D6134BE78D007DCDD0 /* QuickPhotoViewController.m */,
 				ACC156CA0E10E67600D6E1A0 /* EditPostViewController.h */,
 				ACC156CB0E10E67600D6E1A0 /* EditPostViewController.m */,
 				E183EC9B16B1C01D00C2EB11 /* EditPostViewController_Internal.h */,
@@ -3392,6 +3393,10 @@
 				2F970F730DF92274006BD934 /* PostsViewController.m */,
 				E1497BBA12CCA8270022BCD9 /* PostViewController.h */,
 				E1497BBB12CCA8270022BCD9 /* PostViewController.m */,
+				E13FA0D5134BE78D007DCDD0 /* QuickPhotoViewController.h */,
+				E13FA0D6134BE78D007DCDD0 /* QuickPhotoViewController.m */,
+				93CB0EF217CF95620058A46D /* RichEditPostViewController.h */,
+				93CB0EF317CF95700058A46D /* RichEditPostViewController.m */,
 			);
 			name = Post;
 			sourceTree = "<group>";
@@ -5135,6 +5140,7 @@
 				ACBAB5FE0E121C7300F38795 /* PostSettingsViewController.m in Sources */,
 				85F2C4BE17B9F6E600A303E0 /* GeneralWalkthroughPage1ViewController.m in Sources */,
 				ACBAB6860E1247F700F38795 /* PostPreviewViewController.m in Sources */,
+				93CB0EF417CF95700058A46D /* RichEditPostViewController.m in Sources */,
 				ACAC79C60E1F50EB00AC7074 /* WPSelectionTableViewController.m in Sources */,
 				A0E293F10E21027E00C6919C /* WPAddCategoryViewController.m in Sources */,
 				C59D3D4B0E6410D300AA591D /* NSString+XMLExtensions.m in Sources */,

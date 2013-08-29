@@ -33,7 +33,7 @@
 
 // For iPhone
 - (void)editPost:(AbstractPost *)apost {
-    EditPageViewController *editPostViewController = [[EditPageViewController alloc] initWithPost:[apost createRevision]];
+    EditPageViewController *editPostViewController = [EditPageViewController editPostViewControllerWithPost:[apost createRevision]];
     [self.navigationController pushViewController:editPostViewController animated:YES];
     
 }
@@ -65,7 +65,7 @@
         [self resetView];
     
     Page *post = [Page newDraftForBlog:self.blog];
-    EditPageViewController *editPostViewController = [[EditPageViewController alloc] initWithPost:[post createRevision]];
+    EditPageViewController *editPostViewController = [EditPageViewController editPostViewControllerWithPost:[post createRevision]];
     [self.navigationController pushViewController:editPostViewController animated:YES];
 }
 

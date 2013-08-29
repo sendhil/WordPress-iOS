@@ -1,22 +1,16 @@
 #import "EditPostViewController_Internal.h"
 #import "WPSegmentedSelectionTableViewController.h"
-#import "Post.h"
 #import "AutosavingIndicatorView.h"
 #import "NSString+XMLExtensions.h"
 #import "WPPopoverBackgroundView.h"
 #import "WPAddCategoryViewController.h"
 #import "WPStyleGuide.h"
+#import "RichEditPostViewController.h"
 
 NSTimeInterval kAnimationDuration = 0.3f;
 
 NSUInteger const EditPostViewControllerCharactersChangedToAutosave = 50;
 NSUInteger const EditPostViewControllerCharactersChangedToAutosaveOnWWAN = 100;
-
-typedef NS_ENUM(NSInteger, EditPostViewControllerAlertTag) {
-    EditPostViewControllerAlertTagNone,
-    EditPostViewControllerAlertTagLinkHelper,
-    EditPostViewControllerAlertTagFailedMedia,
-};
 
 NSString *const EditPostViewControllerDidAutosaveNotification = @"EditPostViewControllerDidAutosaveNotification";
 NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostViewControllerAutosaveDidFailNotification";
@@ -25,40 +19,11 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 @end
 
 @implementation EditPostViewController {
-    IBOutlet UITextView *textView;
-    IBOutlet UITextField *titleTextField;
-    IBOutlet UITextField *tagsTextField;
-    IBOutlet UILabel *titleLabel;
-    IBOutlet UITextField *textViewPlaceHolderField;
-	IBOutlet UIView *contentView;
-	IBOutlet UIView *editView;
-	IBOutlet UIBarButtonItem *writeButton;
-	IBOutlet UIBarButtonItem *previewButton;
-	IBOutlet UIBarButtonItem *attachmentButton;
-    IBOutlet UIBarButtonItem *createCategoryBarButtonItem;
-    IBOutlet UIImageView *tabPointer;
-    IBOutlet UILabel *tagsLabel;
-    IBOutlet UILabel *categoriesLabel;
-    IBOutlet UIButton *categoriesButton;
-
-    WPKeyboardToolbarBase *editorToolbar;
     UIView *currentView;
-    BOOL isEditing;
-    BOOL isShowingKeyboard;
-    BOOL isExternalKeyboard;
-    BOOL isNewCategory;
-    BOOL isShowingLinkAlert;
     UITextField *__weak currentEditingTextField;
     WPSegmentedSelectionTableViewController *segmentedTableViewController;
     UIActionSheet *currentActionSheet;
-    UITextField *infoText;
-    UITextField *urlField;
 
-    UIAlertView *_failedMediaAlertView;
-    UIAlertView *_linkHelperAlertView;
-    BOOL _isAutosaved;
-    BOOL _isAutosaving;
-    BOOL _hasChangesToAutosave;
     AutosavingIndicatorView *_autosavingIndicatorView;
     NSUInteger _charactersChanged;
     AbstractPost *_backupPost;
@@ -74,53 +39,43 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     _linkHelperAlertView.delegate = nil;
 }
 
-- (id)initWithPost:(AbstractPost *)aPost {
++ (instancetype)editPostViewControllerWithPost:(AbstractPost *)aPost
+{
+    EditPostViewController *instance;
     if (IS_IOS7) {
-        self = [super initWithNibName:@"EditPostViewControlleriOS7" bundle:nil];
+        instance = [[RichEditPostViewController alloc] initWithNibName:@"EditPostViewControlleriOS7" bundle:nil];
     } else {
-        self = [super initWithNibName:@"EditPostViewController" bundle:nil];
-    }
-    if (self) {
-        self.apost = aPost;
-        if (self.apost.remoteStatus == AbstractPostRemoteStatusLocal) {
-            self.editMode = EditPostViewControllerModeNewPost;
-            self.showAddMediaToUser = YES;
-        } else {
-            self.showAddMediaToUser = NO;
-            self.editMode = EditPostViewControllerModeEditPost;
-#if USE_AUTOSAVES
-            _backupPost = [NSEntityDescription insertNewObjectForEntityForName:[[aPost entity] name] inManagedObjectContext:[aPost managedObjectContext]];
-            [_backupPost cloneFrom:aPost];
-#endif
-        }
+        instance = [[EditPostViewController alloc] initWithNibName:@"EditPostViewController" bundle:nil];
     }
     
-    return self;
+    instance.apost = aPost;
+    
+    return instance;
 }
 
 - (void)viewDidLoad {
     WPFLogMethod();
     [super viewDidLoad];
     
-    titleLabel.text = NSLocalizedString(@"Title:", @"Label for the title of the post field. Should be the same as WP core.");
-    tagsLabel.text = NSLocalizedString(@"Tags:", @"Label for the tags field. Should be the same as WP core.");
-    tagsTextField.placeholder = NSLocalizedString(@"Separate tags with commas", @"Placeholder text for the tags field. Should be the same as WP core.");
-    categoriesLabel.text = NSLocalizedString(@"Categories:", @"Label for the categories field. Should be the same as WP core.");
-    textViewPlaceHolderField.placeholder = NSLocalizedString(@"Tap here to begin writing", @"Placeholder for the main body text. Should hint at tapping to enter text (not specifying body text).");
-	textViewPlaceHolderField.textAlignment = NSTextAlignmentCenter;
-    titleTextField.font = [WPStyleGuide postTitleFont];
+    self.titleLabel.text = NSLocalizedString(@"Title:", @"Label for the title of the post field. Should be the same as WP core.");
+    self.tagsLabel.text = NSLocalizedString(@"Tags:", @"Label for the tags field. Should be the same as WP core.");
+    self.tagsTextField.placeholder = NSLocalizedString(@"Separate tags with commas", @"Placeholder text for the tags field. Should be the same as WP core.");
+    self.categoriesLabel.text = NSLocalizedString(@"Categories:", @"Label for the categories field. Should be the same as WP core.");
+    self.textViewPlaceHolderField.placeholder = NSLocalizedString(@"Tap here to begin writing", @"Placeholder for the main body text. Should hint at tapping to enter text (not specifying body text).");
+	self.textViewPlaceHolderField.textAlignment = NSTextAlignmentCenter;
+    self.titleTextField.font = [WPStyleGuide postTitleFont];
 
-    if (editorToolbar == nil) {
+    if (self.editorToolbar == nil) {
         CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, WPKT_HEIGHT_PORTRAIT);
         if (IS_IOS7) {
-            editorToolbar = [[WPKeyboardToolbarWithoutGradient alloc] initWithFrame:frame];
+            self.editorToolbar = [[WPKeyboardToolbarWithoutGradient alloc] initWithFrame:frame];
         } else {
-            editorToolbar = [[WPKeyboardToolbar alloc] initWithFrame:frame];
+            self.editorToolbar = [[WPKeyboardToolbar alloc] initWithFrame:frame];
         }
-        editorToolbar.delegate = self;
+        self.editorToolbar.delegate = self;
     }
-    textView.inputAccessoryView = editorToolbar;
-    textViewPlaceHolderField.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+    self.textView.inputAccessoryView = self.editorToolbar;
+    self.textViewPlaceHolderField.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
 
     if (!self.postSettingsViewController) {
         self.postSettingsViewController = [[PostSettingsViewController alloc] initWithPost:self.apost];
@@ -140,9 +95,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
         [self addChildViewController:self.postMediaViewController];
     }
 
-    self.postSettingsViewController.view.frame = editView.frame;
-    self.postMediaViewController.view.frame = editView.frame;
-    self.postPreviewViewController.view.frame = editView.frame;
+    self.postSettingsViewController.view.frame = self.editView.frame;
+    self.postMediaViewController.view.frame = self.editView.frame;
+    self.postPreviewViewController.view.frame = self.editView.frame;
     
     self.title = [self editorTitle];
 
@@ -154,9 +109,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(insertMediaBelow:) name:@"ShouldInsertMediaBelow" object:nil];
 	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(removeMedia:) name:@"ShouldRemoveMedia" object:nil];	
 
-    currentView = editView;
-	writeButton.enabled = NO;
-    attachmentButton.enabled = [self shouldEnableMediaTab];
+    currentView = self.editView;
+	self.writeButton.enabled = NO;
+    self.attachmentButton.enabled = [self shouldEnableMediaTab];
 	
 	if (![self.postMediaViewController isDeviceSupportVideo] && !IS_IOS7){
 		// No video icon for older devices.
@@ -177,10 +132,10 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
     if (!IS_IOS7) {
         UIColor *color = [UIColor UIColorFromHex:0x222222];
-        writeButton.tintColor = color;
+        self.writeButton.tintColor = color;
         self.settingsButton.tintColor = color;
-        previewButton.tintColor = color;
-        attachmentButton.tintColor = color;
+        self.previewButton.tintColor = color;
+        self.attachmentButton.tintColor = color;
         self.photoButton.tintColor = color;
         self.movieButton.tintColor = color;        
     }
@@ -197,7 +152,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     if (IS_IOS7) {
         self.toolbar.translucent = NO;
         self.toolbar.barStyle = UIBarStyleDefault;
-        titleTextField.placeholder = NSLocalizedString(@"Title:", @"Label for the title of the post field. Should be the same as WP core.");
+        self.titleTextField.placeholder = NSLocalizedString(@"Title:", @"Label for the title of the post field. Should be the same as WP core.");
         self.navigationController.navigationBar.translucent = NO;
     }
     
@@ -213,9 +168,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     
 	[self refreshButtons];
 	
-    textView.frame = self.normalTextFrame;
-    textViewPlaceHolderField.frame = [self textviewPlaceholderFrame];
-	textViewPlaceHolderField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    self.textView.frame = self.normalTextFrame;
+    self.textViewPlaceHolderField.frame = [self textviewPlaceholderFrame];
+	self.textViewPlaceHolderField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
 
 	CABasicAnimation *animateWiggleIt;
 	animateWiggleIt = [CABasicAnimation animationWithKeyPath:@"transform.scale"];
@@ -224,7 +179,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 	animateWiggleIt.autoreverses = NO;
     animateWiggleIt.fromValue = @0.75f;
     animateWiggleIt.toValue = @1.f;
-	[textViewPlaceHolderField.layer addAnimation:animateWiggleIt forKey:@"placeholderWiggle"];
+	[self.textViewPlaceHolderField.layer addAnimation:animateWiggleIt forKey:@"placeholderWiggle"];
 
 }
 
@@ -232,8 +187,8 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     WPFLogMethod();
     [super viewWillDisappear:animated];
     
-	[titleTextField resignFirstResponder];
-	[textView resignFirstResponder];
+	[self.titleTextField resignFirstResponder];
+	[self.textView resignFirstResponder];
 }
 
 - (NSString *)statsPrefix
@@ -274,38 +229,55 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     self.apost = aPost;
 }
 
+- (void)setApost:(AbstractPost *)aPost
+{
+    _apost = aPost;
+    
+    if (_apost.remoteStatus == AbstractPostRemoteStatusLocal) {
+        self.editMode = EditPostViewControllerModeNewPost;
+        self.showAddMediaToUser = YES;
+    } else {
+        self.showAddMediaToUser = NO;
+        self.editMode = EditPostViewControllerModeEditPost;
+#if USE_AUTOSAVES
+        _backupPost = [NSEntityDescription insertNewObjectForEntityForName:[[aPost entity] name] inManagedObjectContext:[aPost managedObjectContext]];
+        [_backupPost cloneFrom:aPost];
+#endif
+    }
+}
+
 - (void)switchToView:(UIView *)newView {
-    if ([newView isEqual:editView]) {
-		writeButton.enabled = NO;
+    if ([newView isEqual:self.editView]) {
+		self.writeButton.enabled = NO;
 		self.settingsButton.enabled = YES;
-		previewButton.enabled = YES;
-        attachmentButton.enabled = [self shouldEnableMediaTab];
+		self.previewButton.enabled = YES;
+        self.attachmentButton.enabled = [self shouldEnableMediaTab];
         
     } else if ([newView isEqual:self.postSettingsViewController.view]) {
-		writeButton.enabled = YES;
+		self.writeButton.enabled = YES;
 		self.settingsButton.enabled = NO;
-		previewButton.enabled = YES;
-        attachmentButton.enabled = [self shouldEnableMediaTab];
+		self.previewButton.enabled = YES;
+        self.attachmentButton.enabled = [self shouldEnableMediaTab];
         
     } else if ([newView isEqual:self.postPreviewViewController.view]) {
-		writeButton.enabled = YES;
+		self.writeButton.enabled = YES;
 		self.settingsButton.enabled = YES;
-		previewButton.enabled = NO;
-        attachmentButton.enabled = [self shouldEnableMediaTab];
+		self.previewButton.enabled = NO;
+        self.attachmentButton.enabled = [self shouldEnableMediaTab];
         
 	} else if ([newView isEqual:self.postMediaViewController.view]) {
-		writeButton.enabled = YES;
+		self.writeButton.enabled = YES;
 		self.settingsButton.enabled = YES;
-		previewButton.enabled = YES;
-		attachmentButton.enabled = NO;
+		self.previewButton.enabled = YES;
+		self.attachmentButton.enabled = NO;
 	}
 	
     newView.frame = currentView.frame;
     [UIView beginAnimations:nil context:nil];
     [UIView setAnimationDuration:0.2];
     
-	CGRect pointerFrame = tabPointer.frame;
-    if ([newView isEqual:editView]) {
+	CGRect pointerFrame = self.tabPointer.frame;
+    if ([newView isEqual:self.editView]) {
 		pointerFrame.origin.x = 22;
     } else if ([newView isEqual:self.postSettingsViewController.view]) {
 		pointerFrame.origin.x = 61;
@@ -322,9 +294,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
             pointerFrame.origin.x = [self pointerPositionForAttachmentsTab];
 		}
 	}
-	tabPointer.frame = pointerFrame;
+	self.tabPointer.frame = pointerFrame;
     [currentView removeFromSuperview];
-    [contentView addSubview:newView];
+    [self.contentView addSubview:newView];
     
     [UIView commitAnimations];
     
@@ -346,9 +318,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 }
 
 - (IBAction)switchToEdit {
-    if (currentView != editView) {
+    if (currentView != self.editView) {
         [WPMobileStats flagProperty:StatsPropertyPostDetailClickedEdit forEvent:[self formattedStatEventString:StatsEventPostDetailClosedEditor]];
-        [self switchToView:editView];
+        [self switchToView:self.editView];
     }
     self.navigationItem.title = [self editorTitle];
 }
@@ -417,7 +389,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
 - (IBAction)showCategories:(id)sender {
     [WPMobileStats flagProperty:StatsPropertyPostDetailClickedShowCategories forEvent:[self formattedStatEventString:StatsEventPostDetailClosedEditor]];
-    [textView resignFirstResponder];
+    [self.textView resignFirstResponder];
     [currentEditingTextField resignFirstResponder];
     [self populateSelectionsControllerWithCategories];
 }
@@ -426,7 +398,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     if (IS_IPAD) {
         CGFloat y = 143;
         if (IS_IOS7) {
-            y = CGRectGetMaxY(titleTextField.frame);
+            y = CGRectGetMaxY(self.titleTextField.frame);
         }
         CGFloat height = self.toolbar.frame.origin.y - y;
         if ((self.interfaceOrientation == UIDeviceOrientationLandscapeLeft)
@@ -438,7 +410,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
         CGFloat y = 136.f;
         if (IS_IOS7) {
             // On IOS7 we get rid of the Tags and Categories fields, so place the textview right under the title
-            y = CGRectGetMaxY(titleTextField.frame);
+            y = CGRectGetMaxY(self.titleTextField.frame);
         }
         CGFloat height = self.toolbar.frame.origin.y - y;
         if ((self.interfaceOrientation == UIDeviceOrientationLandscapeLeft)
@@ -451,7 +423,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
 - (CGRect)textviewPlaceholderFrame
 {
-    return CGRectInset(textView.frame, 7.f, 7.f);
+    return CGRectInset(self.textView.frame, 7.f, 7.f);
 }
 
 - (void)deleteBackupPost {
@@ -534,27 +506,27 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 - (void)refreshUIForCurrentPost {
     self.navigationItem.title = [self editorTitle];
 
-    titleTextField.text = self.apost.postTitle;
+    self.titleTextField.text = self.apost.postTitle;
     if (self.post) {
-        tagsTextField.text = self.post.tags;
-        [categoriesButton setTitle:[NSString decodeXMLCharactersIn:[self.post categoriesText]] forState:UIControlStateNormal];
-        [categoriesButton.titleLabel setFont:[UIFont systemFontOfSize:16.0f]];
+        self.tagsTextField.text = self.post.tags;
+        [self.categoriesButton setTitle:[NSString decodeXMLCharactersIn:[self.post categoriesText]] forState:UIControlStateNormal];
+        [self.categoriesButton.titleLabel setFont:[UIFont systemFontOfSize:16.0f]];
     }
     
     if(self.apost.content == nil || [self.apost.content isEmpty]) {
-        textViewPlaceHolderField.hidden = NO;
-        textView.text = @"";
+        self.textViewPlaceHolderField.hidden = NO;
+        self.textView.text = @"";
     }
     else {
-        textViewPlaceHolderField.hidden = YES;
+        self.textViewPlaceHolderField.hidden = YES;
         if ((self.apost.mt_text_more != nil) && ([self.apost.mt_text_more length] > 0))
-			textView.text = [NSString stringWithFormat:@"%@\n<!--more-->\n%@", self.apost.content, self.apost.mt_text_more];
+			self.textView.text = [NSString stringWithFormat:@"%@\n<!--more-->\n%@", self.apost.content, self.apost.mt_text_more];
 		else
-			textView.text = self.apost.content;
+			self.textView.text = self.apost.content;
     }
     
 	// workaround for odd text view behavior on iPad
-	[textView setContentOffset:CGPointZero animated:NO];
+	[self.textView setContentOffset:CGPointZero animated:NO];
 
     [self refreshButtons];
 }
@@ -578,15 +550,15 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 										 andDelegate:self];
 	
     segmentedTableViewController.title = NSLocalizedString(@"Categories", @"");
-    if ([createCategoryBarButtonItem respondsToSelector:@selector(setTintColor:)]) {
-        createCategoryBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"navbar_add"]style:UIBarButtonItemStyleBordered 
+    if ([self.createCategoryBarButtonItem respondsToSelector:@selector(setTintColor:)]) {
+        self.createCategoryBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"navbar_add"]style:UIBarButtonItemStyleBordered
                                                                       target:self 
                                                                       action:@selector(showAddNewCategoryView:)];
     } 
     
-    segmentedTableViewController.navigationItem.rightBarButtonItem = createCategoryBarButtonItem;
+    segmentedTableViewController.navigationItem.rightBarButtonItem = self.createCategoryBarButtonItem;
 	
-    if (isNewCategory != YES) {
+    if (self.isNewCategory != YES) {
 		if (IS_IPAD == YES) {
             UINavigationController *navController;
             if (segmentedTableViewController.navigationController) {
@@ -600,7 +572,8 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
                 popover.popoverBackgroundViewClass = [WPPopoverBackgroundView class];
             }
             popover.delegate = self;
-			CGRect popoverRect = [self.view convertRect:[categoriesButton frame] fromView:[categoriesButton superview]];
+			CGRect popoverRect = [self.view convertRect:[self.categoriesButton frame]
+                                               fromView:[self.categoriesButton superview]];
 			popoverRect.size.width = MIN(popoverRect.size.width, 100.0f); // the text field is actually really big
             popover.popoverContentSize = CGSizeMake(320.0f, 460.0f);
 			[popover presentPopoverFromRect:popoverRect inView:self.view permittedArrowDirections:UIPopoverArrowDirectionAny animated:YES];
@@ -612,7 +585,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 		}
     }
 	
-	isNewCategory = NO;
+	self.isNewCategory = NO;
 }
 
 - (void)selectionTableViewController:(WPSelectionTableViewController *)selctionController completedSelectionsWithContext:(void *)selContext selectedObjects:(NSArray *)selectedObjects haveChanges:(BOOL)isChanged {
@@ -627,7 +600,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
         NSMutableSet *categories = [self.post mutableSetValueForKey:@"categories"];
         [categories removeAllObjects];
         [categories addObjectsFromArray:selectedObjects];
-        [categoriesButton setTitle:[NSString decodeXMLCharactersIn:[self.post categoriesText]] forState:UIControlStateNormal];
+        [self.categoriesButton setTitle:[NSString decodeXMLCharactersIn:[self.post categoriesText]] forState:UIControlStateNormal];
     }
 
     _hasChangesToAutosave = YES;
@@ -640,7 +613,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 - (void)newCategoryCreatedNotificationReceived:(NSNotification *)notification {
     WPFLogMethod();
     if ([segmentedTableViewController curContext] == kSelectionsCategoriesContext) {
-        isNewCategory = YES;
+        self.isNewCategory = YES;
         [self populateSelectionsControllerWithCategories];
     }
 }
@@ -742,13 +715,13 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 }
 
 - (void)autosaveContent {
-    self.apost.postTitle = titleTextField.text;
+    self.apost.postTitle = self.titleTextField.text;
     self.navigationItem.title = [self editorTitle];
     if (!IS_IOS7) {
         // Tags isn't on the main editor in iOS 7
-        self.post.tags = tagsTextField.text;
+        self.post.tags = self.tagsTextField.text;
     }
-    self.apost.content = textView.text;
+    self.apost.content = self.textView.text;
 	if ([self.apost.content rangeOfString:@"<!--more-->"].location != NSNotFound)
 		self.apost.mt_text_more = @"";
 
@@ -909,9 +882,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 - (IBAction)cancelView:(id)sender {
     if(currentActionSheet) return;
     
-    [textView resignFirstResponder];
-    [titleTextField resignFirstResponder];
-    [tagsTextField resignFirstResponder];
+    [self.textView resignFirstResponder];
+    [self.titleTextField resignFirstResponder];
+    [self.tagsTextField resignFirstResponder];
 	[self.postSettingsViewController endEditingAction:nil];
 #if USE_AUTOSAVES
     [self restoreBackupPost:YES];
@@ -985,41 +958,41 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
     _linkHelperAlertView = [[UIAlertView alloc] init];
 	if (IS_IPAD || [[UIDevice currentDevice] orientation] == UIInterfaceOrientationPortrait) {
-		infoText = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 46.0, 260.0, 31.0)];
-		urlField = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 82.0, 260.0, 31.0)];
+		self.infoText = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 46.0, 260.0, 31.0)];
+		self.urlField = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 82.0, 260.0, 31.0)];
 	}
 	else {
-		infoText = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 33.0, 260.0, 28.0)];
-		urlField = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 65.0, 260.0, 28.0)];
+		self.infoText = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 33.0, 260.0, 28.0)];
+		self.urlField = [[UITextField alloc] initWithFrame:CGRectMake(12.0, 65.0, 260.0, 28.0)];
 	}
 
-    infoText.placeholder = NSLocalizedString(@"Text to be linked", @"Popup to aid in creating a Link in the Post Editor.");
-    urlField.placeholder = NSLocalizedString(@"Link URL", @"Popup to aid in creating a Link in the Post Editor, URL field (where you can type or paste a URL that the text should link.");
-	infoText.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
-	urlField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+    self.infoText.placeholder = NSLocalizedString(@"Text to be linked", @"Popup to aid in creating a Link in the Post Editor.");
+    self.urlField.placeholder = NSLocalizedString(@"Link URL", @"Popup to aid in creating a Link in the Post Editor, URL field (where you can type or paste a URL that the text should link.");
+	self.infoText.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
+	self.urlField.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
     
-    NSRange range = textView.selectedRange;
+    NSRange range = self.textView.selectedRange;
     
     if (range.length > 0)
-        infoText.text = [textView.text substringWithRange:range];
+        self.infoText.text = [self.textView.text substringWithRange:range];
     
-    infoText.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    urlField.autocapitalizationType = UITextAutocapitalizationTypeNone;
-    infoText.borderStyle = UITextBorderStyleRoundedRect;
-    urlField.borderStyle = UITextBorderStyleRoundedRect;
-    infoText.keyboardAppearance = UIKeyboardAppearanceAlert;
-    urlField.keyboardAppearance = UIKeyboardAppearanceAlert;
-	infoText.keyboardType = UIKeyboardTypeDefault;
-	urlField.keyboardType = UIKeyboardTypeURL;
+    self.infoText.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    self.urlField.autocapitalizationType = UITextAutocapitalizationTypeNone;
+    self.infoText.borderStyle = UITextBorderStyleRoundedRect;
+    self.urlField.borderStyle = UITextBorderStyleRoundedRect;
+    self.infoText.keyboardAppearance = UIKeyboardAppearanceAlert;
+    self.urlField.keyboardAppearance = UIKeyboardAppearanceAlert;
+	self.infoText.keyboardType = UIKeyboardTypeDefault;
+	self.urlField.keyboardType = UIKeyboardTypeURL;
     [_linkHelperAlertView addButtonWithTitle:NSLocalizedString(@"Cancel", @"Cancel button")];
     [_linkHelperAlertView addButtonWithTitle:NSLocalizedString(@"Insert", @"Insert content (link, media) button")];
     _linkHelperAlertView.title = NSLocalizedString(@"Make a Link\n\n\n\n", @"Title of the Link Helper popup to aid in creating a Link in the Post Editor. DON'T REMOVE the line breaks!");
     _linkHelperAlertView.delegate = self;
-    [_linkHelperAlertView addSubview:infoText];
-    [_linkHelperAlertView addSubview:urlField];
-    [infoText becomeFirstResponder];
+    [_linkHelperAlertView addSubview:self.infoText];
+    [_linkHelperAlertView addSubview:self.urlField];
+    [self.infoText becomeFirstResponder];
 	
-    isShowingLinkAlert = YES;
+    self.isShowingLinkAlert = YES;
     _linkHelperAlertView.tag = EditPostViewControllerAlertTagLinkHelper;
     [_linkHelperAlertView show];
 }
@@ -1035,34 +1008,34 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     WordPressAppDelegate *delegate = (WordPressAppDelegate*)[[UIApplication sharedApplication] delegate];
 	
     if (alertView.tag == EditPostViewControllerAlertTagLinkHelper) {
-        isShowingLinkAlert = NO;
+        self.isShowingLinkAlert = NO;
         if (buttonIndex == 1) {
-            if ((urlField.text == nil) || ([urlField.text isEqualToString:@""])) {
+            if ((self.urlField.text == nil) || ([self.urlField.text isEqualToString:@""])) {
                 [delegate setAlertRunning:NO];
                 return;
             }
 			
-            if ((infoText.text == nil) || ([infoText.text isEqualToString:@""]))
-                infoText.text = urlField.text;
+            if ((self.infoText.text == nil) || ([self.infoText.text isEqualToString:@""]))
+                self.infoText.text = self.urlField.text;
 			
-            NSString *urlString = [self validateNewLinkInfo:[urlField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
-            NSString *aTagText = [NSString stringWithFormat:@"<a href=\"%@\">%@</a>", urlString, infoText.text];
+            NSString *urlString = [self validateNewLinkInfo:[self.urlField.text stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
+            NSString *aTagText = [NSString stringWithFormat:@"<a href=\"%@\">%@</a>", urlString, self.infoText.text];
             
-            NSRange range = textView.selectedRange;
+            NSRange range = self.textView.selectedRange;
             
-            NSString *oldText = textView.text;
-            NSRange oldRange = textView.selectedRange;
-            textView.text = [textView.text stringByReplacingCharactersInRange:range withString:aTagText];
+            NSString *oldText = self.textView.text;
+            NSRange oldRange = self.textView.selectedRange;
+            self.textView.text = [self.textView.text stringByReplacingCharactersInRange:range withString:aTagText];
             
             //reset selection back to nothing
             range.length = 0;
             
             if (range.length == 0) {                // If nothing was selected
                 range.location += [aTagText length]; // Place selection between tags
-                textView.selectedRange = range;
+                self.textView.selectedRange = range;
             }
-            [[textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
-            [textView.undoManager setActionName:@"link"];            
+            [[self.textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
+            [self.textView.undoManager setActionName:@"link"];
             
             _hasChangesToAutosave = YES;
             [self autosaveContent];
@@ -1070,7 +1043,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
         }
 		
         [delegate setAlertRunning:NO];
-        [textView touchesBegan:nil withEvent:nil];
+        [self.textView touchesBegan:nil withEvent:nil];
         _linkHelperAlertView = nil;
     } else if (alertView.tag == EditPostViewControllerAlertTagFailedMedia) {
         if (buttonIndex == 1) {
@@ -1140,13 +1113,13 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
  */
 - (BOOL)textViewShouldBeginEditing:(UITextView *)aTextView {
     WPFLogMethod();
-    isEditing = YES;
+    self.isEditing = YES;
     return YES;
 }
 
 - (void)textViewDidBeginEditing:(UITextView *)aTextView {
     WPFLogMethod();
-    [textViewPlaceHolderField removeFromSuperview];
+    [self.textViewPlaceHolderField removeFromSuperview];
 }
 
 - (BOOL)textView:(UITextView *)textView shouldChangeTextInRange:(NSRange)range replacementText:(NSString *)text {
@@ -1164,11 +1137,11 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 - (void)textViewDidEndEditing:(UITextView *)aTextView {
     WPFLogMethod();
 	
-	if([textView.text isEqualToString:@""]) {
-        [editView addSubview:textViewPlaceHolderField];
+	if([self.textView.text isEqualToString:@""]) {
+        [self.editView addSubview:self.textViewPlaceHolderField];
 	}
 	
-    isEditing = NO;
+    self.isEditing = NO;
     _hasChangesToAutosave = YES;
     [self autosaveContent];
     [self autosaveRemote];
@@ -1179,7 +1152,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 #pragma mark - TextField delegate
 
 - (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
-    if (textField == textViewPlaceHolderField) {
+    if (textField == self.textViewPlaceHolderField) {
         return NO;
     }
 	return YES;
@@ -1208,12 +1181,12 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 }
 
 - (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
-    if (textField == titleTextField) {
+    if (textField == self.titleTextField) {
         self.apost.postTitle = [textField.text stringByReplacingCharactersInRange:range withString:string];
         self.navigationItem.title = [self editorTitle];
 
-    } else if (textField == tagsTextField) {
-        self.post.tags = [tagsTextField.text stringByReplacingCharactersInRange:range withString:string];
+    } else if (textField == self.tagsTextField) {
+        self.post.tags = [self.tagsTextField.text stringByReplacingCharactersInRange:range withString:string];
     }
 
     _hasChangesToAutosave = YES;
@@ -1253,7 +1226,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
         CGRect originalKeyboardFrame = [[keyboardInfo objectForKey:UIKeyboardFrameEndUserInfoKey] CGRectValue];
         CGRect keyboardFrame = [self.view convertRect:[self.view.window convertRect:originalKeyboardFrame fromWindow:nil] fromView:nil];
 
-        isExternalKeyboard = keyboardFrame.origin.y + keyboardFrame.size.height > self.view.bounds.size.height;
+        self.isExternalKeyboard = keyboardFrame.origin.y + keyboardFrame.size.height > self.view.bounds.size.height;
         /*
          "Full screen" mode for:
          * iPhone Portrait without external keyboard
@@ -1266,9 +1239,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
          * iPad Landscape with external keyboard
          */
         BOOL wantsFullScreen = (
-                                (!IS_IPAD && !isExternalKeyboard)                  // iPhone without external keyboard
-                                || (!IS_IPAD && isLandscape && isExternalKeyboard) // iPhone Landscape with external keyboard
-                                || (IS_IPAD && isLandscape && !isExternalKeyboard) // iPad Landscape without external keyboard
+                                (!IS_IPAD && !self.isExternalKeyboard)                  // iPhone without external keyboard
+                                || (!IS_IPAD && isLandscape && self.isExternalKeyboard) // iPhone Landscape with external keyboard
+                                || (IS_IPAD && isLandscape && !self.isExternalKeyboard) // iPad Landscape without external keyboard
                                 );
         if (wantsFullScreen && isShowing) {
             [self.navigationController setNavigationBarHidden:YES animated:YES];;
@@ -1290,15 +1263,15 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
             newFrame.size.height = keyboardFrame.origin.y - newFrame.origin.y;
 
             [self.toolbar setHidden:YES];
-            [tabPointer setHidden:YES];
+            [self.tabPointer setHidden:YES];
         } else {
             [self.toolbar setHidden:NO];
-            [tabPointer setHidden:NO];
+            [self.tabPointer setHidden:NO];
         }
 	}
 
-    [textView setFrame:newFrame];
-    textViewPlaceHolderField.frame = [self textviewPlaceholderFrame];
+    [self.textView setFrame:newFrame];
+    self.textViewPlaceHolderField.frame = [self textviewPlaceholderFrame];
 	
 	[UIView commitAnimations];
 }
@@ -1307,8 +1280,8 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     CGRect frame;
     frame.size.width = 80.f;
     frame.size.height = 20.f;
-    frame.origin.x = CGRectGetMaxX(textView.frame) - 4.f - frame.size.width;
-    frame.origin.y = CGRectGetMaxY(textView.frame) - 4.f - frame.size.height;
+    frame.origin.x = CGRectGetMaxX(self.textView.frame) - 4.f - frame.size.width;
+    frame.origin.y = CGRectGetMaxY(self.textView.frame) - 4.f - frame.size.height;
 
     NSDictionary *keyboardInfo = [notification userInfo];
     if (keyboardInfo) {
@@ -1325,7 +1298,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
 - (void)willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation duration:(NSTimeInterval)duration {
     WPFLogMethod();
-    CGRect frame = editorToolbar.frame;
+    CGRect frame = self.editorToolbar.frame;
     if (UIDeviceOrientationIsLandscape(interfaceOrientation)) {
         if (IS_IPAD) {
             frame.size.height = WPKT_HEIGHT_IPAD_LANDSCAPE;
@@ -1339,7 +1312,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
             frame.size.height = WPKT_HEIGHT_IPHONE_PORTRAIT;
         }            
     }
-    editorToolbar.frame = frame;
+    self.editorToolbar.frame = frame;
 
 }
 
@@ -1351,20 +1324,20 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     }
     
     if ([currentView isEqual:self.postMediaViewController.view]) {
-        CGRect pointerFrame = tabPointer.frame;
+        CGRect pointerFrame = self.tabPointer.frame;
         pointerFrame.origin.x = [self pointerPositionForAttachmentsTab];
-        tabPointer.frame = pointerFrame;
+        self.tabPointer.frame = pointerFrame;
     }
 	
 	// This reinforces text field constraints set above, for when the Link Helper is already showing when the device is rotated.
-	if (isShowingLinkAlert) {
+	if (self.isShowingLinkAlert) {
 		if ([[UIDevice currentDevice] orientation] == UIInterfaceOrientationPortrait) {
-			infoText.frame = CGRectMake(12.0, 46.0, 260.0, 31.0);
-			urlField.frame = CGRectMake(12.0, 82.0, 260.0, 31.0);
+			self.infoText.frame = CGRectMake(12.0, 46.0, 260.0, 31.0);
+			self.urlField.frame = CGRectMake(12.0, 82.0, 260.0, 31.0);
 		}
 		else {
-			infoText.frame = CGRectMake(12.0, 33.0, 260.0, 28.0);
-			urlField.frame = CGRectMake(12.0, 65.0, 260.0, 28.0);
+			self.infoText.frame = CGRectMake(12.0, 33.0, 260.0, 28.0);
+			self.urlField.frame = CGRectMake(12.0, 65.0, 260.0, 28.0);
 		}
 	}
 }
@@ -1383,17 +1356,17 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 	}
 	
 	NSMutableString *content = [[NSMutableString alloc] initWithString:media.html];
-	NSRange imgHTML = [textView.text rangeOfString: content];
+	NSRange imgHTML = [self.textView.text rangeOfString: content];
 	
-	NSRange imgHTMLPre = [textView.text rangeOfString:[NSString stringWithFormat:@"%@%@", @"<br /><br />", content]]; 
- 	NSRange imgHTMLPost = [textView.text rangeOfString:[NSString stringWithFormat:@"%@%@", content, @"<br /><br />"]]; 
+	NSRange imgHTMLPre = [self.textView.text rangeOfString:[NSString stringWithFormat:@"%@%@", @"<br /><br />", content]];
+ 	NSRange imgHTMLPost = [self.textView.text rangeOfString:[NSString stringWithFormat:@"%@%@", content, @"<br /><br />"]];
 	
 	if (imgHTMLPre.location == NSNotFound && imgHTMLPost.location == NSNotFound && imgHTML.location == NSNotFound) {
 		[content appendString:[NSString stringWithFormat:@"%@%@", prefix, self.apost.content]];
         self.apost.content = content;
 	}
 	else { 
-		NSMutableString *processedText = [[NSMutableString alloc] initWithString:textView.text]; 
+		NSMutableString *processedText = [[NSMutableString alloc] initWithString:self.textView.text];
 		if (imgHTMLPre.location != NSNotFound) 
 			[processedText replaceCharactersInRange:imgHTMLPre withString:@""];
 		else if (imgHTMLPost.location != NSNotFound) 
@@ -1451,9 +1424,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
 	//remove the html string for the media object
 	Media *media = (Media *)[notification object];
-	textView.text = [textView.text stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"<br /><br />%@", media.html] withString:@""];
-	textView.text = [textView.text stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"%@<br /><br />", media.html] withString:@""];
-	textView.text = [textView.text stringByReplacingOccurrencesOfString:media.html withString:@""];
+	self.textView.text = [self.textView.text stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"<br /><br />%@", media.html] withString:@""];
+	self.textView.text = [self.textView.text stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"%@<br /><br />", media.html] withString:@""];
+	self.textView.text = [self.textView.text stringByReplacingOccurrencesOfString:media.html withString:@""];
     _hasChangesToAutosave = YES;
     [self autosaveContent];
     [self refreshUIForCurrentPost];
@@ -1464,39 +1437,38 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 #pragma mark - Keyboard toolbar
 
 - (void)undo {
-    [textView.undoManager undo];
+    [self.textView.undoManager undo];
     _hasChangesToAutosave = YES;
     [self autosaveContent];
 }
 
 - (void)redo {
-    [textView.undoManager redo];
+    [self.textView.undoManager redo];
     _hasChangesToAutosave = YES;
     [self autosaveContent];
 }
 
 - (void)restoreText:(NSString *)text withRange:(NSRange)range {
-    NSLog(@"restoreText:%@",text);
-    NSString *oldText = textView.text;
-    NSRange oldRange = textView.selectedRange;
-    textView.scrollEnabled = NO;
+    NSString *oldText = self.textView.text;
+    NSRange oldRange = self.textView.selectedRange;
+    self.textView.scrollEnabled = NO;
     // iOS6 seems to have a bug where setting the text like so : textView.text = text;
     // will cause an infinate loop of undos.  A work around is to perform the selector
     // on the main thread.
     // textView.text = text;
-    [textView performSelectorOnMainThread:@selector(setText:) withObject:text waitUntilDone:NO];
-    textView.scrollEnabled = YES;
-    textView.selectedRange = range;
-    [[textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
+    [self.textView performSelectorOnMainThread:@selector(setText:) withObject:text waitUntilDone:NO];
+    self.textView.scrollEnabled = YES;
+    self.textView.selectedRange = range;
+    [[self.textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
     _hasChangesToAutosave = YES;
     [self autosaveContent];
     [self incrementCharactersChangedForAutosaveBy:MAX(text.length, range.length)];
 }
 
 - (void)wrapSelectionWithTag:(NSString *)tag {
-    NSRange range = textView.selectedRange;
+    NSRange range = self.textView.selectedRange;
     NSRange originalRange = range;
-    NSString *selection = [textView.text substringWithRange:range];
+    NSString *selection = [self.textView.text substringWithRange:range];
     NSString *prefix, *suffix;
     if ([tag isEqualToString:@"ul"] || [tag isEqualToString:@"ol"]) {
         prefix = [NSString stringWithFormat:@"<%@>\n", tag];
@@ -1514,18 +1486,18 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
         prefix = [NSString stringWithFormat:@"<%@>", tag];
         suffix = [NSString stringWithFormat:@"</%@>", tag];        
     }
-    textView.scrollEnabled = NO;
+    self.textView.scrollEnabled = NO;
     NSString *replacement = [NSString stringWithFormat:@"%@%@%@",prefix,selection,suffix];
-    textView.text = [textView.text stringByReplacingCharactersInRange:range
+    self.textView.text = [self.textView.text stringByReplacingCharactersInRange:range
                                                            withString:replacement];
-    textView.scrollEnabled = YES;
+    self.textView.scrollEnabled = YES;
     if (range.length == 0) {                // If nothing was selected
         range.location += [prefix length]; // Place selection between tags
     } else {
         range.location += range.length + [prefix length] + [suffix length]; // Place selection after tag
         range.length = 0;
     }
-    textView.selectedRange = range;
+    self.textView.selectedRange = range;
     _hasChangesToAutosave = YES;
     [self autosaveContent];
     [self incrementCharactersChangedForAutosaveBy:MAX(replacement.length, originalRange.length)];
@@ -1537,13 +1509,13 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     if ([buttonItem.actionTag isEqualToString:@"link"]) {
         [self showLinkView];
     } else if ([buttonItem.actionTag isEqualToString:@"done"]) {
-        [textView resignFirstResponder];
+        [self.textView resignFirstResponder];
     } else {
-        NSString *oldText = textView.text;
-        NSRange oldRange = textView.selectedRange;
+        NSString *oldText = self.textView.text;
+        NSRange oldRange = self.textView.selectedRange;
         [self wrapSelectionWithTag:buttonItem.actionTag];
-        [[textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
-        [textView.undoManager setActionName:buttonItem.actionName];    
+        [[self.textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
+        [self.textView.undoManager setActionName:buttonItem.actionName];
     }
 }
 
@@ -1582,10 +1554,10 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
 - (void)keyboardWillShow:(NSNotification *)notification {
     WPFLogMethod();
-	isShowingKeyboard = YES;
-    if (isEditing) {
+	self.isShowingKeyboard = YES;
+    if (self.isEditing) {
         [self positionTextView:notification];
-        editorToolbar.doneButton.hidden = IS_IPAD && ! isExternalKeyboard;
+        self.editorToolbar.doneButton.hidden = IS_IPAD && ! self.isExternalKeyboard;
     }
     [self positionAutosaveView:notification];
     [[UIApplication sharedApplication] setStatusBarHidden:YES withAnimation:UIStatusBarAnimationNone];
@@ -1593,7 +1565,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
 - (void)keyboardWillHide:(NSNotification *)notification {
     WPFLogMethod();
-	isShowingKeyboard = NO;
+	self.isShowingKeyboard = NO;
     [self positionTextView:notification];
     [self positionAutosaveView:notification];
     [[UIApplication sharedApplication] setStatusBarHidden:NO withAnimation:UIStatusBarAnimationNone];

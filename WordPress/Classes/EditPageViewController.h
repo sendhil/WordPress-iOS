@@ -11,4 +11,6 @@
 @interface EditPageViewController : EditPostViewController {
 }
 
++ (instancetype)editPageViewControllerWithPage:(AbstractPost *)aPost;
+
 @end

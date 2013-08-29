@@ -18,5 +18,6 @@ typedef NS_ENUM(NSUInteger, EditPostViewControllerMode) {
 @property(nonatomic, strong) NSString *statsPrefix;
 @property(nonatomic, assign) BOOL showAddMediaToUser;
 
-- (id)initWithPost:(AbstractPost *)aPost;
++ (instancetype)editPostViewControllerWithPost:(AbstractPost *)aPost;
+
 @end

@@ -286,13 +286,13 @@
         [self resetView];
     
     Post *post = [Post newDraftForBlog:self.blog];
-    EditPostViewController *editPostViewController = [[EditPostViewController alloc] initWithPost:[post createRevision]];
+    EditPostViewController *editPostViewController = [EditPostViewController editPostViewControllerWithPost:[post createRevision]];
     [self.navigationController pushViewController:editPostViewController animated:YES];
 }
 
 // For iPhone
 - (void)editPost:(AbstractPost *)apost {
-    EditPostViewController *editPostViewController = [[EditPostViewController alloc] initWithPost:[apost createRevision]];
+    EditPostViewController *editPostViewController = [EditPostViewController editPostViewControllerWithPost:[apost createRevision]];
     [self.navigationController pushViewController:editPostViewController animated:YES];
 }
 

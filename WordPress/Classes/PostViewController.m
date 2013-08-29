@@ -312,7 +312,8 @@
 }
 
 - (EditPostViewController *)getPostOrPageController:(AbstractPost *)revision {
-	return [[EditPostViewController alloc] initWithPost:revision];
+    // FIXME : This should be a class method or something not here
+	return [EditPostViewController editPostViewControllerWithPost:revision];
 }
 
 // Subclassed in PageViewController

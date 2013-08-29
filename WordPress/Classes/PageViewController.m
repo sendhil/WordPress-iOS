@@ -40,7 +40,7 @@
 }
 
 - (EditPostViewController *)getPostOrPageController: (AbstractPost *) revision {
-	return [[EditPageViewController alloc] initWithPost:revision];
+	return [EditPageViewController editPageViewControllerWithPage:revision];
 }
 
 @end

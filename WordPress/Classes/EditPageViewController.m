@@ -11,13 +11,14 @@
 
 @implementation EditPageViewController
 
-- (id)initWithPost:(AbstractPost *)aPost
++ (instancetype)editPageViewControllerWithPage:(AbstractPost *)aPost
 {
-    self = [super initWithPost:aPost];
-    if (self) {
-        self.statsPrefix = @"Page Detail";
-    }
-    return self;
+    EditPageViewController *instance;
+    instance = [[EditPageViewController alloc] initWithNibName:@"EditPostViewController" bundle:nil];
+    instance.apost = aPost;
+    instance.statsPrefix = @"Page Detail";
+    
+    return instance;
 }
 
 - (NSString *)editorTitle {
