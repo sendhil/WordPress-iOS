@@ -67,13 +67,10 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
     if (self.editorToolbar == nil) {
         CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, WPKT_HEIGHT_PORTRAIT);
-        if (IS_IOS7) {
-            self.editorToolbar = [[WPKeyboardToolbarWithoutGradient alloc] initWithFrame:frame];
-        } else {
-            self.editorToolbar = [[WPKeyboardToolbar alloc] initWithFrame:frame];
-        }
+        self.editorToolbar = [[WPKeyboardToolbar alloc] initWithFrame:frame];
         self.editorToolbar.delegate = self;
     }
+    
     self.textView.inputAccessoryView = self.editorToolbar;
     self.textViewPlaceHolderField.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
 
@@ -130,16 +127,6 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
     [self refreshUIForCurrentPost];
 
-    if (!IS_IOS7) {
-        UIColor *color = [UIColor UIColorFromHex:0x222222];
-        self.writeButton.tintColor = color;
-        self.settingsButton.tintColor = color;
-        self.previewButton.tintColor = color;
-        self.attachmentButton.tintColor = color;
-        self.photoButton.tintColor = color;
-        self.movieButton.tintColor = color;        
-    }
-
     if (_autosavingIndicatorView == nil) {
         _autosavingIndicatorView = [[AutosavingIndicatorView alloc] initWithFrame:CGRectZero];
         _autosavingIndicatorView.hidden = YES;
@@ -147,13 +134,6 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 
         [self.view addSubview:_autosavingIndicatorView];
         [self positionAutosaveView:nil];
-    }
-    
-    if (IS_IOS7) {
-        self.toolbar.translucent = NO;
-        self.toolbar.barStyle = UIBarStyleDefault;
-        self.titleTextField.placeholder = NSLocalizedString(@"Title:", @"Label for the title of the post field. Should be the same as WP core.");
-        self.navigationController.navigationBar.translucent = NO;
     }
     
     [WPMobileStats trackEventForWPCom:[self formattedStatEventString:StatsEventPostDetailOpenedEditor]];
@@ -397,9 +377,6 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 - (CGRect)normalTextFrame {
     if (IS_IPAD) {
         CGFloat y = 143;
-        if (IS_IOS7) {
-            y = CGRectGetMaxY(self.titleTextField.frame);
-        }
         CGFloat height = self.toolbar.frame.origin.y - y;
         if ((self.interfaceOrientation == UIDeviceOrientationLandscapeLeft)
             || (self.interfaceOrientation == UIDeviceOrientationLandscapeRight)) // Landscape
@@ -408,10 +385,6 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
             return CGRectMake(0, y, self.view.bounds.size.width, height);
     } else {
         CGFloat y = 136.f;
-        if (IS_IOS7) {
-            // On IOS7 we get rid of the Tags and Categories fields, so place the textview right under the title
-            y = CGRectGetMaxY(self.titleTextField.frame);
-        }
         CGFloat height = self.toolbar.frame.origin.y - y;
         if ((self.interfaceOrientation == UIDeviceOrientationLandscapeLeft)
             || (self.interfaceOrientation == UIDeviceOrientationLandscapeRight)) // Landscape
@@ -488,12 +461,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     }
 
     if (self.navigationItem.rightBarButtonItem == nil) {
-        UIBarButtonItem *saveButton;
-        if (IS_IOS7) {
-            saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(saveAction:)];
-        } else {
-            saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStyleDone target:self action:@selector(saveAction:)];
-        }
+        UIBarButtonItem *saveButton = saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStyleDone target:self action:@selector(saveAction:)];
         self.navigationItem.rightBarButtonItem = saveButton;
     } else {
         self.navigationItem.rightBarButtonItem.title = buttonTitle;
@@ -717,10 +685,8 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 - (void)autosaveContent {
     self.apost.postTitle = self.titleTextField.text;
     self.navigationItem.title = [self editorTitle];
-    if (!IS_IOS7) {
-        // Tags isn't on the main editor in iOS 7
-        self.post.tags = self.tagsTextField.text;
-    }
+    self.post.tags = self.tagsTextField.text;
+
     self.apost.content = self.textView.text;
 	if ([self.apost.content rangeOfString:@"<!--more-->"].location != NSNotFound)
 		self.apost.mt_text_more = @"";

@@ -17,17 +17,20 @@
 #pragma mark LifeCycle Methods
 
 - (void)viewDidLoad {
-    WPFLogMethod();
-    if (self.editorToolbar == nil) {
-        CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, WPKT_HEIGHT_PORTRAIT);
-        if (IS_IOS7) {
-            self.editorToolbar = [[WPKeyboardToolbarWithoutGradient alloc] initWithFrame:frame];
-            self.editorToolbar.delegate = self;
-        }
-    }
-
+    CGRect frame = CGRectMake(0, 0, self.view.frame.size.width, WPKT_HEIGHT_PORTRAIT);
+    self.editorToolbar = [[WPKeyboardToolbarWithoutGradient alloc] initWithFrame:frame];
+    self.editorToolbar.delegate = self;
+    
     [super viewDidLoad];
     
+    UIColor *color = [UIColor UIColorFromHex:0x222222];
+    self.writeButton.tintColor = color;
+    self.settingsButton.tintColor = color;
+    self.previewButton.tintColor = color;
+    self.attachmentButton.tintColor = color;
+    self.photoButton.tintColor = color;
+    self.movieButton.tintColor = color;
+
     self.toolbar.translucent = NO;
     self.toolbar.barStyle = UIBarStyleDefault;
     self.titleTextField.placeholder = NSLocalizedString(@"Title:", @"Label for the title of the post field. Should be the same as WP core.");
@@ -58,10 +61,7 @@
 
 - (CGRect)normalTextFrame {
     if (IS_IPAD) {
-        CGFloat y = 143;
-        if (IS_IOS7) {
-            y = CGRectGetMaxY(self.titleTextField.frame);
-        }
+        CGFloat y = CGRectGetMaxY(self.titleTextField.frame);
         CGFloat height = self.toolbar.frame.origin.y - y;
         if ((self.interfaceOrientation == UIDeviceOrientationLandscapeLeft)
             || (self.interfaceOrientation == UIDeviceOrientationLandscapeRight)) // Landscape
@@ -69,11 +69,7 @@
         else // Portrait
             return CGRectMake(0, y, self.view.bounds.size.width, height);
     } else {
-        CGFloat y = 136.f;
-        if (IS_IOS7) {
-            // On IOS7 we get rid of the Tags and Categories fields, so place the textview right under the title
-            y = CGRectGetMaxY(self.titleTextField.frame);
-        }
+        CGFloat y = CGRectGetMaxY(self.titleTextField.frame);
         CGFloat height = self.toolbar.frame.origin.y - y;
         if ((self.interfaceOrientation == UIDeviceOrientationLandscapeLeft)
             || (self.interfaceOrientation == UIDeviceOrientationLandscapeRight)) // Landscape
@@ -110,12 +106,7 @@
     }
 
     if (self.navigationItem.rightBarButtonItem == nil) {
-        UIBarButtonItem *saveButton;
-        if (IS_IOS7) {
-            saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(saveAction:)];
-        } else {
-            saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStyleDone target:self action:@selector(saveAction:)];
-        }
+        UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStylePlain target:self action:@selector(saveAction:)];
         self.navigationItem.rightBarButtonItem = saveButton;
     } else {
         self.navigationItem.rightBarButtonItem.title = buttonTitle;
@@ -138,14 +129,15 @@
     
     if(self.apost.content == nil || [self.apost.content isEmpty]) {
         self.textViewPlaceHolderField.hidden = NO;
-        self.textView.text = @"";
+        self.textView.attributedText = [[NSAttributedString alloc] initWithString:@""];
     }
     else {
         self.textViewPlaceHolderField.hidden = YES;
-        if ((self.apost.mt_text_more != nil) && ([self.apost.mt_text_more length] > 0))
-			self.textView.text = [NSString stringWithFormat:@"%@\n<!--more-->\n%@", self.apost.content, self.apost.mt_text_more];
-		else
-			self.textView.text = self.apost.content;
+        if ((self.apost.mt_text_more != nil) && ([self.apost.mt_text_more length] > 0)) {
+			self.textView.attributedText = [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n<!--more-->\n%@", self.apost.content, self.apost.mt_text_more]];
+		} else {
+			self.textView.attributedText = [[NSAttributedString alloc] initWithString:self.apost.content];
+        }
     }
     
 	// workaround for odd text view behavior on iPad
@@ -158,10 +150,7 @@
 - (void)autosaveContent {
     self.apost.postTitle = self.titleTextField.text;
     self.navigationItem.title = [self editorTitle];
-    if (!IS_IOS7) {
-        // Tags isn't on the main editor in iOS 7
-        self.post.tags = self.tagsTextField.text;
-    }
+    // TODO :: This should convert the rich text into HTML
     self.apost.content = self.textView.text;
 	if ([self.apost.content rangeOfString:@"<!--more-->"].location != NSNotFound)
 		self.apost.mt_text_more = @"";
@@ -240,7 +229,7 @@
 - (void)textViewDidEndEditing:(UITextView *)aTextView {
     WPFLogMethod();
 	
-	if([self.textView.text isEqualToString:@""]) {
+	if(!self.textView.attributedText.length > 0) {
         [self.editView addSubview:self.textViewPlaceHolderField];
 	}
 	
@@ -367,16 +356,16 @@
 #pragma mark - Keyboard toolbar
 
 // TODO :: Update for rich text editing
-- (void)restoreText:(NSString *)text withRange:(NSRange)range {
+- (void)restoreText:(NSAttributedString *)text withRange:(NSRange)range {
     NSLog(@"restoreText:%@",text);
-    NSString *oldText = self.textView.text;
+    NSAttributedString *oldText = self.textView.attributedText;
     NSRange oldRange = self.textView.selectedRange;
     self.textView.scrollEnabled = NO;
     // iOS6 seems to have a bug where setting the text like so : textView.text = text;
     // will cause an infinate loop of undos.  A work around is to perform the selector
     // on the main thread.
     // textView.text = text;
-    [self.textView performSelectorOnMainThread:@selector(setText:) withObject:text waitUntilDone:NO];
+    [self.textView performSelectorOnMainThread:@selector(setAttributedText:) withObject:text waitUntilDone:NO];
     self.textView.scrollEnabled = YES;
     self.textView.selectedRange = range;
     [[self.textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
@@ -387,41 +376,86 @@
 
 // TODO :: Update for rich text editing
 - (void)wrapSelectionWithTag:(NSString *)tag {
+    // TODO - Determine if text field is empty or selection/cursor is at the end of the text
+    
+    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:self.textView.attributedText];
+    
     NSRange range = self.textView.selectedRange;
-    NSRange originalRange = range;
-    NSString *selection = [self.textView.text substringWithRange:range];
-    NSString *prefix, *suffix;
-    if ([tag isEqualToString:@"ul"] || [tag isEqualToString:@"ol"]) {
-        prefix = [NSString stringWithFormat:@"<%@>\n", tag];
-        suffix = [NSString stringWithFormat:@"\n</%@>\n", tag];
-    } else if ([tag isEqualToString:@"li"]) {
-        prefix = [NSString stringWithFormat:@"\t<%@>", tag];
-        suffix = [NSString stringWithFormat:@"</%@>\n", tag];
-    } else if ([tag isEqualToString:@"more"]) {
-        prefix = @"<!--more-->";
-        suffix = @"\n";
+    NSUInteger length = text.length;
+    NSUInteger index = range.location;
+    
+    UIFont *existingFont = nil;
+    NSNumber *strikeThrough = @0;
+    NSParagraphStyle *paragraphStyle = [NSParagraphStyle defaultParagraphStyle];
+    
+    if (length == 0) {
+        existingFont = self.textView.font;
+    } else {
+        existingFont = [text attribute:NSFontAttributeName atIndex:range.location effectiveRange:nil];
+        strikeThrough = [text attribute:NSStrikethroughStyleAttributeName atIndex:range.location effectiveRange:nil] ?: @0;
+        paragraphStyle = [text attribute:NSParagraphStyleAttributeName atIndex:range.location effectiveRange:nil] ?: [NSParagraphStyle defaultParagraphStyle];
+    }
+    
+    UIFontDescriptor *fd = [existingFont fontDescriptor];
+    
+    UIFontDescriptorSymbolicTraits traits = 0;
+    //    if ([tag isEqualToString:@"ul"] || [tag isEqualToString:@"ol"]) {
+    //        prefix = [NSString stringWithFormat:@"<%@>\n", tag];
+    //        suffix = [NSString stringWithFormat:@"\n</%@>\n", tag];
+    //    } else if ([tag isEqualToString:@"li"]) {
+    //        prefix = [NSString stringWithFormat:@"\t<%@>", tag];
+    //        suffix = [NSString stringWithFormat:@"</%@>\n", tag];
+    //    } else if ([tag isEqualToString:@"more"]) {
+    //        prefix = @"<!--more-->";
+    //        suffix = @"\n";
+    
+    if ([tag isEqualToString:@"strong"]) {
+        traits = UIFontDescriptorTraitBold;
+    } else if ([tag isEqualToString:@"em"]) {
+        traits = UIFontDescriptorTraitItalic;
+    } else if ([tag isEqualToString:@"del"]) {
+        if (strikeThrough.intValue == 0) {
+            strikeThrough = @1;
+        } else {
+            strikeThrough = @0;
+        }
     } else if ([tag isEqualToString:@"blockquote"]) {
-        prefix = [NSString stringWithFormat:@"\n<%@>", tag];
-        suffix = [NSString stringWithFormat:@"</%@>\n", tag];
-    } else {
-        prefix = [NSString stringWithFormat:@"<%@>", tag];
-        suffix = [NSString stringWithFormat:@"</%@>", tag];        
+        NSMutableParagraphStyle *newStyle = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
+        
+        if (paragraphStyle.headIndent == 0.0) {
+            newStyle.headIndent = 20.0;
+            newStyle.firstLineHeadIndent = 20.0;
+        } else {
+            newStyle.headIndent = 0.0;
+            newStyle.firstLineHeadIndent = 0.0;
+        }
+        
+        paragraphStyle = newStyle;
+    } else if ([tag isEqualToString:@"ol"]) {
+        
+    } else if ([tag isEqualToString:@"li"]) {
+        
     }
+    
     self.textView.scrollEnabled = NO;
-    NSString *replacement = [NSString stringWithFormat:@"%@%@%@",prefix,selection,suffix];
-    self.textView.text = [self.textView.text stringByReplacingCharactersInRange:range
-                                                                     withString:replacement];
+    
+    [text beginEditing];
+    
+    UIFontDescriptorSymbolicTraits newTraits = fd.symbolicTraits ^ traits;
+    UIFontDescriptor *newFd = [fd fontDescriptorWithSymbolicTraits:newTraits];
+    UIFont *newFont = [UIFont fontWithDescriptor:newFd size:0.0];
+    [text addAttribute:NSFontAttributeName value:newFont range:range];
+    [text addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:range];
+    [text addAttribute:NSStrikethroughStyleAttributeName value:strikeThrough range:range];
+    
+    [text endEditing];
+    
+    self.textView.attributedText = text;
     self.textView.scrollEnabled = YES;
-    if (range.length == 0) {                // If nothing was selected
-        range.location += [prefix length]; // Place selection between tags
-    } else {
-        range.location += range.length + [prefix length] + [suffix length]; // Place selection after tag
-        range.length = 0;
-    }
-    self.textView.selectedRange = range;
+    
     self.hasChangesToAutosave = YES;
     [self autosaveContent];
-    [self incrementCharactersChangedForAutosaveBy:MAX(replacement.length, originalRange.length)];
+    //    [self incrementCharactersChangedForAutosaveBy:MAX(replacement.length, originalRange.length)];
 }
 
 // TODO :: Update for rich text editing
@@ -433,7 +467,7 @@
     } else if ([buttonItem.actionTag isEqualToString:@"done"]) {
         [self.textView resignFirstResponder];
     } else {
-        NSString *oldText = self.textView.text;
+        NSAttributedString *oldText = self.textView.attributedText;
         NSRange oldRange = self.textView.selectedRange;
         [self wrapSelectionWithTag:buttonItem.actionTag];
         [[self.textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];

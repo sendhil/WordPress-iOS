@@ -86,5 +86,7 @@ typedef NS_ENUM(NSInteger, EditPostViewControllerAlertTag) {
 - (NSString *)formattedStatEventString:(NSString *)event;
 - (void)logWPKeyboardToolbarButtonStat:(WPKeyboardToolbarButtonItem *)buttonItem;
 - (void)showLinkView;
+- (CGRect)normalTextFrame;
+- (void)autosaveContent;
 
 @end
