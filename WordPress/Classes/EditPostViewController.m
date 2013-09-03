@@ -461,7 +461,7 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
     }
 
     if (self.navigationItem.rightBarButtonItem == nil) {
-        UIBarButtonItem *saveButton = saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:UIBarButtonItemStyleDone target:self action:@selector(saveAction:)];
+        UIBarButtonItem *saveButton = [[UIBarButtonItem alloc] initWithTitle:buttonTitle style:[WPStyleGuide barButtonStyleForDone] target:self action:@selector(saveAction:)];
         self.navigationItem.rightBarButtonItem = saveButton;
     } else {
         self.navigationItem.rightBarButtonItem.title = buttonTitle;
@@ -518,8 +518,9 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 										 andDelegate:self];
 	
     segmentedTableViewController.title = NSLocalizedString(@"Categories", @"");
-    if ([self.createCategoryBarButtonItem respondsToSelector:@selector(setTintColor:)]) {
-        self.createCategoryBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"navbar_add"]style:UIBarButtonItemStyleBordered
+    if ([createCategoryBarButtonItem respondsToSelector:@selector(setTintColor:)]) {
+        createCategoryBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"navbar_add"]
+                                                                       style:[WPStyleGuide barButtonStyleForBordered]
                                                                       target:self 
                                                                       action:@selector(showAddNewCategoryView:)];
     } 
