@@ -518,8 +518,8 @@ NSString *const EditPostViewControllerAutosaveDidFailNotification = @"EditPostVi
 										 andDelegate:self];
 	
     segmentedTableViewController.title = NSLocalizedString(@"Categories", @"");
-    if ([createCategoryBarButtonItem respondsToSelector:@selector(setTintColor:)]) {
-        createCategoryBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"navbar_add"]
+    if ([self.createCategoryBarButtonItem respondsToSelector:@selector(setTintColor:)]) {
+        self.createCategoryBarButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage imageNamed:@"navbar_add"]
                                                                        style:[WPStyleGuide barButtonStyleForBordered]
                                                                       target:self 
                                                                       action:@selector(showAddNewCategoryView:)];
