@@ -129,14 +129,13 @@
     
     if(self.apost.content == nil || [self.apost.content isEmpty]) {
         self.textViewPlaceHolderField.hidden = NO;
-        self.textView.attributedText = [[NSAttributedString alloc] initWithString:@""];
-    }
-    else {
+        self.textView.text = @"";
+    } else {
         self.textViewPlaceHolderField.hidden = YES;
         if ((self.apost.mt_text_more != nil) && ([self.apost.mt_text_more length] > 0)) {
-			self.textView.attributedText = [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n<!--more-->\n%@", self.apost.content, self.apost.mt_text_more]];
+			self.textView.text = [NSString stringWithFormat:@"%@\n<!--more-->\n%@", self.apost.content, self.apost.mt_text_more];
 		} else {
-			self.textView.attributedText = [[NSAttributedString alloc] initWithString:self.apost.content];
+			self.textView.text = self.apost.content;
         }
     }
     
@@ -187,9 +186,10 @@
             
             NSRange range = self.textView.selectedRange;
             
-            NSString *oldText = self.textView.text;
+            NSMutableAttributedString *oldText = [self.textView.attributedText mutableCopy];
             NSRange oldRange = self.textView.selectedRange;
-            self.textView.text = [self.textView.text stringByReplacingCharactersInRange:range withString:aTagText];
+            [oldText replaceCharactersInRange:range withString:aTagText];
+            self.textView.attributedText = oldText;
             
             //reset selection back to nothing
             range.length = 0;
@@ -198,6 +198,7 @@
                 range.location += [aTagText length]; // Place selection between tags
                 self.textView.selectedRange = range;
             }
+            
             [[self.textView.undoManager prepareWithInvocationTarget:self] restoreText:oldText withRange:oldRange];
             [self.textView.undoManager setActionName:@"link"];
             
@@ -229,7 +230,7 @@
 - (void)textViewDidEndEditing:(UITextView *)aTextView {
     WPFLogMethod();
 	
-	if(!self.textView.attributedText.length > 0) {
+	if(!self.textView.text.length > 0) {
         [self.editView addSubview:self.textViewPlaceHolderField];
 	}
 	
@@ -265,39 +266,27 @@
     [WPMobileStats trackEventForWPCom:[self formattedStatEventString:StatsEventPostDetailAddedPhoto]];
     
 	Media *media = (Media *)[notification object];
-	NSString *prefix = @"<br /><br />";
-	
-	if(self.apost.content == nil || [self.apost.content isEqualToString:@""]) {
-		self.apost.content = @"";
-		prefix = @"";
-	}
-	
-	NSMutableString *content = [[NSMutableString alloc] initWithString:media.html];
-	NSRange imgHTML = [self.textView.text rangeOfString: content];
-	
-	NSRange imgHTMLPre = [self.textView.text rangeOfString:[NSString stringWithFormat:@"%@%@", @"<br /><br />", content]];
- 	NSRange imgHTMLPost = [self.textView.text rangeOfString:[NSString stringWithFormat:@"%@%@", content, @"<br /><br />"]];
-	
-	if (imgHTMLPre.location == NSNotFound && imgHTMLPost.location == NSNotFound && imgHTML.location == NSNotFound) {
-		[content appendString:[NSString stringWithFormat:@"%@%@", prefix, self.apost.content]];
-        self.apost.content = content;
-	}
-	else { 
-		NSMutableString *processedText = [[NSMutableString alloc] initWithString:self.textView.text];
-		if (imgHTMLPre.location != NSNotFound) 
-			[processedText replaceCharactersInRange:imgHTMLPre withString:@""];
-		else if (imgHTMLPost.location != NSNotFound) 
-			[processedText replaceCharactersInRange:imgHTMLPost withString:@""];
-		else  
-			[processedText replaceCharactersInRange:imgHTML withString:@""];  
-		 
-		[content appendString:[NSString stringWithFormat:@"<br /><br />%@", processedText]]; 
-		self.apost.content = content;
-	}
+    NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+    UIImage *image = [UIImage imageWithData:media.thumbnail];
+    attachment.image = image;
+    
+    NSTextStorage *text = self.textView.textStorage;
+    [text beginEditing];
+    
+    NSMutableAttributedString *attachmentString = [[NSAttributedString attributedStringWithAttachment:attachment] mutableCopy];
+    [attachmentString appendAttributedString:[[NSAttributedString alloc] initWithString:@"\n"]];
+    NSMutableParagraphStyle *style = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
+    style.alignment = NSTextAlignmentCenter;
+    [attachmentString addAttribute:NSParagraphStyleAttributeName value:style range:NSMakeRange(0, 1)];
+    
+    [text insertAttributedString:attachmentString atIndex:0];
+
+    [text endEditing];
     self.hasChangesToAutosave = YES;
-    [self refreshUIForCurrentPost];
+//    [self refreshUIForCurrentPost];
     [self.apost autosave];
-    [self incrementCharactersChangedForAutosaveBy:content.length];
+    [self incrementCharactersChangedForAutosaveBy:2];
+    
 }
 
 // TODO :: Update for rich text editing
@@ -305,36 +294,27 @@
     [WPMobileStats trackEventForWPCom:[self formattedStatEventString:StatsEventPostDetailAddedPhoto]];
     
 	Media *media = (Media *)[notification object];
-	NSString *prefix = @"<br /><br />";
-	
-	if(self.apost.content == nil || [self.apost.content isEqualToString:@""]) {
-		self.apost.content = @"";
-		prefix = @"";
-	}
-	
-	NSMutableString *content = [[NSMutableString alloc] initWithString:self.apost.content];
-	NSRange imgHTML = [content rangeOfString: media.html];
-	NSRange imgHTMLPre = [content rangeOfString:[NSString stringWithFormat:@"%@%@", @"<br /><br />", media.html]]; 
- 	NSRange imgHTMLPost = [content rangeOfString:[NSString stringWithFormat:@"%@%@", media.html, @"<br /><br />"]];
-	
-	if (imgHTMLPre.location == NSNotFound && imgHTMLPost.location == NSNotFound && imgHTML.location == NSNotFound) {
-		[content appendString:[NSString stringWithFormat:@"%@%@", prefix, media.html]];
-        self.apost.content = content;
-	}
-	else {
-		if (imgHTMLPre.location != NSNotFound) 
-			[content replaceCharactersInRange:imgHTMLPre withString:@""]; 
-		else if (imgHTMLPost.location != NSNotFound) 
-			[content replaceCharactersInRange:imgHTMLPost withString:@""];
-		else  
-			[content replaceCharactersInRange:imgHTML withString:@""];
-		[content appendString:[NSString stringWithFormat:@"<br /><br />%@", media.html]];
-		self.apost.content = content;
-	}
+    NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+    UIImage *image = [UIImage imageWithData:media.thumbnail];
+    attachment.image = image;
+    
+    NSTextStorage *text = self.textView.textStorage;
+    [text beginEditing];
+    
+    NSMutableAttributedString *attachmentString = [[NSAttributedString attributedStringWithAttachment:attachment] mutableCopy];
+    [attachmentString insertAttributedString:[[NSAttributedString alloc] initWithString:@"\n"] atIndex:0];
+    NSMutableParagraphStyle *style = [[NSMutableParagraphStyle defaultParagraphStyle] mutableCopy];
+    style.alignment = NSTextAlignmentCenter;
+    [attachmentString addAttribute:NSParagraphStyleAttributeName value:style range:NSMakeRange(1, 1)];
+
+    [text appendAttributedString:attachmentString];
+    
+    [text endEditing];
+
     self.hasChangesToAutosave = YES;
-    [self refreshUIForCurrentPost];
+//    [self refreshUIForCurrentPost];
     [self.apost autosave];
-    [self incrementCharactersChangedForAutosaveBy:content.length];
+    [self incrementCharactersChangedForAutosaveBy:2];
 }
 
 // TODO :: Update for rich text editing
@@ -378,7 +358,7 @@
 - (void)wrapSelectionWithTag:(NSString *)tag {
     // TODO - Determine if text field is empty or selection/cursor is at the end of the text
     
-    NSMutableAttributedString *text = [[NSMutableAttributedString alloc] initWithAttributedString:self.textView.attributedText];
+    NSTextStorage *text = self.textView.textStorage;
     
     NSRange range = self.textView.selectedRange;
     NSUInteger length = text.length;
@@ -450,7 +430,6 @@
     
     [text endEditing];
     
-    self.textView.attributedText = text;
     self.textView.scrollEnabled = YES;
     
     self.hasChangesToAutosave = YES;
