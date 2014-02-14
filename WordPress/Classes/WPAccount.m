@@ -143,12 +143,12 @@ NSString * const WPAccountDefaultWordPressComAccountChangedNotification = @"WPAc
 
 #pragma mark - Account creation
 
-+ (WPAccount *)createOrUpdateWordPressComAccountWithUsername:(NSString *)username password:(NSString *)password authToken:(NSString *)authToken {
-    return [WPAccount createOrUpdateWordPressComAccountWithUsername:username password:password authToken:authToken context:[[ContextManager sharedInstance] backgroundContext]];
++ (WPAccount *)createOrUpdateWordPressComAccountWithUsername:(NSString *)username authToken:(NSString *)authToken {
+    return [WPAccount createOrUpdateWordPressComAccountWithUsername:username authToken:authToken context:[[ContextManager sharedInstance] backgroundContext]];
 }
 
-+ (WPAccount *)createOrUpdateWordPressComAccountWithUsername:(NSString *)username password:(NSString *)password authToken:(NSString *)authToken context:(NSManagedObjectContext *)context {
-    __block WPAccount *account = [self createOrUpdateSelfHostedAccountWithXmlrpc:WordPressDotcomXMLRPCKey username:username andPassword:password withContext:context];
++ (WPAccount *)createOrUpdateWordPressComAccountWithUsername:(NSString *)username authToken:(NSString *)authToken context:(NSManagedObjectContext *)context {
+    __block WPAccount *account = [self createOrUpdateSelfHostedAccountWithXmlrpc:WordPressDotcomXMLRPCKey username:username andPassword:nil withContext:context];
     [context performBlockAndWait:^{
         account.authToken = authToken;
         account.isWpcom = YES;

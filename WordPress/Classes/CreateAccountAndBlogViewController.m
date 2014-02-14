@@ -690,7 +690,7 @@ CGFloat const CreateAccountAndBlogButtonHeight = 40.0;
     }];
     WPAsyncBlockOperation *userSignIn = [WPAsyncBlockOperation operationWithBlock:^(WPAsyncBlockOperation *operation){
         void (^signInSuccess)(NSString *authToken) = ^(NSString *authToken){
-            _account = [WPAccount createOrUpdateWordPressComAccountWithUsername:_usernameField.text password:_passwordField.text authToken:authToken];
+            _account = [WPAccount createOrUpdateWordPressComAccountWithUsername:_usernameField.text authToken:authToken];
             if (![WPAccount defaultWordPressComAccount]) {
                 [WPAccount setDefaultWordPressComAccount:_account];
             }

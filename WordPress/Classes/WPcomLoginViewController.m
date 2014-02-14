@@ -340,7 +340,7 @@
         WordPressComOAuthClient *client = [WordPressComOAuthClient client];
         [client authenticateWithUsername:username
                                 password:password success:^(NSString *authToken) {
-                                    WPAccount *account = [WPAccount createOrUpdateWordPressComAccountWithUsername:username password:password authToken:authToken];
+                                    WPAccount *account = [WPAccount createOrUpdateWordPressComAccountWithUsername:username authToken:authToken];
                                     [WPAccount setDefaultWordPressComAccount:account];
                                     [loginController.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:0 inSection:1]] withRowAnimation:UITableViewRowAnimationNone];
                                     if (loginController.delegate) {

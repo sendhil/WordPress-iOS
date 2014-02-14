@@ -765,7 +765,7 @@ CGFloat const GeneralWalkthroughStatusBarOffset = 20.0;
 - (void)createWordPressComAccountForUsername:(NSString *)username password:(NSString *)password authToken:(NSString *)authToken
 {
     [self setAuthenticating:YES withStatusMessage:NSLocalizedString(@"Getting account information", nil)];
-    WPAccount *account = [WPAccount createOrUpdateWordPressComAccountWithUsername:username password:password authToken:authToken];
+    WPAccount *account = [WPAccount createOrUpdateWordPressComAccountWithUsername:username authToken:authToken];
     if (![WPAccount defaultWordPressComAccount]) {
         [WPAccount setDefaultWordPressComAccount:account];
     }

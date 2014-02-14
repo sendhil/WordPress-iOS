@@ -308,7 +308,7 @@ CGFloat const JetpackSignInButtonHeight = 41.0;
                            success:^{
                                if (![[[WPAccount defaultWordPressComAccount] restApi] hasCredentials]) {
                                    [[WordPressComOAuthClient client] authenticateWithUsername:_usernameField.text password:_passwordField.text success:^(NSString *authToken) {
-                                       WPAccount *account = [WPAccount createOrUpdateWordPressComAccountWithUsername:_usernameField.text password:_passwordField.text authToken:authToken];
+                                       WPAccount *account = [WPAccount createOrUpdateWordPressComAccountWithUsername:_usernameField.text authToken:authToken];
                                        [WPAccount setDefaultWordPressComAccount:account];
                                    } failure:^(NSError *error) {
                                        DDLogWarn(@"Unabled to obtain OAuth token for account credentials provided for Jetpack blog. %@", error);
