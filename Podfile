@@ -30,6 +30,7 @@ pod 'WordPressCom-Analytics-iOS', '0.0.6'
 pod 'NSObject-SafeExpectations', '0.0.2'
 pod 'SocketRocket', :git => 'https://github.com/jleandroperez/SocketRocket.git', :branch => 'master'
 pod 'Simperium', '0.6.9'
+pod "AppbotX", :git => "https://github.com/appbotx/appbotx.git", :commit => "b91b4015b1d40dec8a839d1af3ec0f3481a0a575"
 
 target 'WordPressTodayWidget', :exclusive => true do
     pod 'WordPressCom-Stats-iOS', '0.1.2'

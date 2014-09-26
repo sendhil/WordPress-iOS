@@ -27,6 +27,7 @@ extern NSInteger const kMeTabIndex;
 @property (nonatomic, strong,  readonly) Simperium                      *simperium;
 @property (nonatomic, assign,  readonly) BOOL                           connectionAvailable;
 @property (nonatomic, assign,  readonly) BOOL                           wpcomAvailable;
+@property (nonatomic, assign,  readonly) BOOL                           appbotXEnabled;
 
 + (WordPressAppDelegate *)sharedWordPressApplicationDelegate;
 

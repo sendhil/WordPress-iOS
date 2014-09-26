@@ -20,6 +20,7 @@ PODS:
   - AFNetworking/UIKit (2.3.1):
     - AFNetworking/NSURLConnection
     - AFNetworking/NSURLSession
+  - AppbotX (1.0.5)
   - CocoaLumberjack (1.8.1):
     - CocoaLumberjack/Extensions
   - CocoaLumberjack/Core (1.8.1)
@@ -93,6 +94,7 @@ PODS:
 
 DEPENDENCIES:
   - AFNetworking (~> 2.3.1)
+  - AppbotX (from `https://github.com/appbotx/appbotx.git`, commit `b91b4015b1d40dec8a839d1af3ec0f3481a0a575`)
   - CocoaLumberjack (~> 1.8.1)
   - CrashlyticsLumberjack (~> 1.0.0)
   - CTAssetsPickerController (~> 2.2.2)
@@ -122,6 +124,9 @@ DEPENDENCIES:
   - wpxmlrpc (~> 0.4.1)
 
 EXTERNAL SOURCES:
+  AppbotX:
+    :commit: b91b4015b1d40dec8a839d1af3ec0f3481a0a575
+    :git: https://github.com/appbotx/appbotx.git
   EmailChecker:
     :podspec: https://raw.github.com/wordpress-mobile/EmailChecker/master/ios/EmailChecker.podspec
   MGImageUtilities:
@@ -141,6 +146,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   AFNetworking: 6d7b76aa5d04c8c37daad3eef4b7e3f2a7620da3
+  AppbotX: fd00dff2dc70279d919d6378b73ca7f1dfebcbb6
   CocoaLumberjack: 9d198d6e19909b3b113a38c5f06f7bb8eedd0427
   CrashlyticsLumberjack: b2a184319db06a070ccc176c07c503720ebedf81
   CTAssetsPickerController: e1247f76d97a129b75c4050990e75fd2eff7430f

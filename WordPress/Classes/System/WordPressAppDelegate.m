@@ -11,6 +11,7 @@
 #import <Helpshift/Helpshift.h>
 #import <Taplytics/Taplytics.h>
 #import <WordPress-iOS-Shared/WPFontManager.h>
+#import <AppbotX/ABX.h>
 
 #import "WordPressAppDelegate.h"
 #import "ContextManager.h"
@@ -85,6 +86,7 @@ static NSString* const kWPNewPostURLParamImageKey = @"image";
 @property (nonatomic, assign, readwrite) BOOL                           connectionAvailable;
 @property (nonatomic, assign, readwrite) BOOL                           wpcomAvailable;
 @property (nonatomic, assign, readwrite) BOOL                           listeningForBlogChanges;
+@property (nonatomic, assign, readwrite) BOOL                           appbotXEnabled;
 
 @end
 
@@ -188,7 +190,8 @@ static NSString* const kWPNewPostURLParamImageKey = @"image";
     if (application.applicationState == UIApplicationStateActive) {
         [NotificationsManager handleNotificationForApplicationLaunch:launchOptions];
     }
-
+    
+    [self configureAppbotX];
     [self.window makeKeyAndVisible];
     [self showWelcomeScreenIfNeededAnimated:NO];
 
@@ -1111,6 +1114,18 @@ static NSString* const kWPNewPostURLParamImageKey = @"image";
 - (void)logoutSimperiumAndResetNotifications
 {
     [self.simperium signOutAndRemoveLocalData:YES completion:nil];
+}
+
+#pragma mark - AppbotX
+
+- (void)configureAppbotX
+{
+    if ([WordPressComApiCredentials appbotXAPIKey].length > 0) {
+        self.appbotXEnabled = YES;
+        [[ABXApiClient instance] setApiKey:[WordPressComApiCredentials appbotXAPIKey]];
+    } else {
+        self.appbotXEnabled = NO;
+    }
 }
 
 #pragma mark - Keychain
