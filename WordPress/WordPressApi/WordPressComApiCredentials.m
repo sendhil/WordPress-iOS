@@ -53,8 +53,4 @@
     return @"";
 }
 
-+ (NSString *)taplyticsAPIKey {
-    return @"";
-}
-
 @end
