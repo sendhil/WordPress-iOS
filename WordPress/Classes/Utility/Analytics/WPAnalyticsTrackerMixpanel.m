@@ -8,6 +8,7 @@
 #import "Blog.h"
 #import "BlogService.h"
 #import "WPAnalyticsTrackerMixpanel.h"
+#import "UIDevice+WordPressIdentifier.h"
 
 @implementation WPAnalyticsTrackerMixpanel
 
@@ -65,17 +66,27 @@ NSString *const EmailAddressRetrievedKey = @"email_address_retrieved";
         }
     }
 
+    NSInteger blogCount = [blogService blogCountForAllAccounts];
     NSMutableDictionary *superProperties = [[NSMutableDictionary alloc] initWithDictionary:[Mixpanel sharedInstance].currentSuperProperties];
     superProperties[@"platform"] = @"iOS";
     superProperties[@"dotcom_user"] = @(dotcom_user);
     superProperties[@"jetpack_user"] = @(jetpack_user);
-    superProperties[@"number_of_blogs"] = @([blogService blogCountForAllAccounts]);
+    superProperties[@"number_of_blogs"] = @(blogCount);
     [[Mixpanel sharedInstance] registerSuperProperties:superProperties];
 
     NSString *username = account.username;
+    BOOL noWordPressDotComAccountAndNoBlogs = (account == nil) && (blogCount == 0);
     if (account && [username length] > 0) {
         [[Mixpanel sharedInstance] identify:username];
         [[Mixpanel sharedInstance].people set:@{ @"$username": username, @"$first_name" : username }];
+    } else if (noWordPressDotComAccountAndNoBlogs) {
+        NSString *temporaryIdentifier = [NSString stringWithFormat:@"WPiOSTemp-%@", [[UIDevice currentDevice] wordpressIdentifier]];
+        [[Mixpanel sharedInstance] identify:temporaryIdentifier];
+        [[Mixpanel sharedInstance].people set:@{ @"$username": temporaryIdentifier, @"$first_name": @"Logged Out User" }];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(10 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            // Trying to force a refresh of the A/B testing so we can enable support if necessary
+            [[Mixpanel sharedInstance] joinExperiments];
+        });
     }
 
     [self retrieveAndRegisterEmailAddressIfApplicable];
