@@ -129,7 +129,6 @@ static NSString* const kWPNewPostURLParamImageKey = @"image";
 
     [Helpshift installForApiKey:[WordPressComApiCredentials helpshiftAPIKey] domainName:[WordPressComApiCredentials helpshiftDomainName] appID:[WordPressComApiCredentials helpshiftAppId]];
     [[Helpshift sharedInstance] setDelegate:self];
-    [SupportViewController checkIfHelpshiftShouldBeEnabled];
 
     NSNumber *usage_tracking = [[NSUserDefaults standardUserDefaults] valueForKey:kUsageTrackingDefaultsKey];
     if (usage_tracking == nil) {
@@ -171,7 +170,7 @@ static NSString* const kWPNewPostURLParamImageKey = @"image";
     
     // Configure Today Widget
     [self determineIfTodayWidgetIsConfiguredAndShowAppropriately];
-
+    
     CGRect bounds = [[UIScreen mainScreen] bounds];
     [self.window setFrame:bounds];
     [self.window setBounds:bounds]; // for good measure.

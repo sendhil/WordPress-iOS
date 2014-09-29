@@ -7,6 +7,7 @@
 #import "WPTableViewSectionFooterView.h"
 #import <Helpshift/Helpshift.h>
 #import <Taplytics/Taplytics.h>
+#import <Mixpanel/MPTweakInline.h>
 #import "WPAnalytics.h"
 #import <WordPress-iOS-Shared/WPStyleGuide.h>
 #import "ContextManager.h"
@@ -75,7 +76,7 @@ typedef NS_ENUM(NSInteger, SettingsViewControllerSections)
     [operation start];
 }
 
-+ (void)checkIfHelpshiftShouldBeEnabled
+- (void)checkIfHelpshiftShouldBeEnabled
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     [defaults registerDefaults:@{UserDefaultsHelpshiftEnabled:@NO}];
@@ -87,20 +88,20 @@ typedef NS_ENUM(NSInteger, SettingsViewControllerSections)
         [defaults synchronize];
         return;
     }
-
-    [Taplytics runCodeExperiment:@"Helpshift Distribution" withBaseline:^(NSDictionary *variables) {
-        DDLogInfo(@"Taplytics: Helpshift Experiment - Baseline Enabled");
-
-        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-        [defaults setBool:NO forKey:UserDefaultsHelpshiftEnabled];
-        [defaults synchronize];
-    } variations:@{@"Helpshift Enabled": ^(NSDictionary *variables) {
-        DDLogInfo(@"Taplytics: Helpshift Experiment - Helpshift Enabled");
+    
+    if (MPTweakValue(@"Helpshift Enabled", NO)) {
+        DDLogInfo(@"Helpshift Enabled");
 
         NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
         [defaults setBool:YES forKey:UserDefaultsHelpshiftEnabled];
         [defaults synchronize];
-    }}];
+    } else {
+        DDLogInfo(@"Helpshift Disabled");
+        
+        NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+        [defaults setBool:NO forKey:UserDefaultsHelpshiftEnabled];
+        [defaults synchronize];
+    }
 }
 
 + (void)showFromTabBar
@@ -138,6 +139,8 @@ typedef NS_ENUM(NSInteger, SettingsViewControllerSections)
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    [self checkIfHelpshiftShouldBeEnabled];
 
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     self.feedbackEnabled = [defaults boolForKey:UserDefaultsFeedbackEnabled];
